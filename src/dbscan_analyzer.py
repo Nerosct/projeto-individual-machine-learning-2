@@ -3,15 +3,13 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
-import matplotlib.pyplot as plt
-import config
 
 class DBSCANAnalyzer:
     """DBSCAN analysis for anomaly detection"""
     
-    def __init__(self, eps=None, min_samples=None):
-        self.eps = eps or config.DBSCAN_PARAMS['eps']
-        self.min_samples = min_samples or config.DBSCAN_PARAMS['min_samples']
+    def __init__(self, eps=0.8, min_samples=5):
+        self.eps = eps
+        self.min_samples = min_samples
         self.model = None
         self.results = {}
     

@@ -1,7 +1,34 @@
 # src/data_loader.py
 import pandas as pd
 from pathlib import Path
-import config
+import sys
+import os
+
+# Importação direta do config
+try:
+    import config
+except ImportError:
+    # Fallback: configuração inline
+    ROOT_DIR = Path(__file__).parent.parent
+    DATA_DIR = ROOT_DIR / "data"
+    RESULTS_DIR = ROOT_DIR / "results"
+    
+    DATA_FILES = {
+        'customers': 'customers.csv',
+        'products': 'products.csv', 
+        'orders': 'orders.csv',
+        'order_items': 'order_items.csv',
+        'suppliers': 'suppliers.csv',
+        'reviews': 'reviews.csv',
+        'payments': 'payment.csv',  # CORRIGIDO: payment.csv em vez de payments.csv
+        'shipments': 'shipments.csv'
+    }
+    
+    # Criar variáveis globais como fallback
+    config = type('Config', (), {
+        'DATA_DIR': DATA_DIR,
+        'DATA_FILES': DATA_FILES
+    })()
 
 class DataLoader:
     """Class to load and validate e-commerce datasets"""
@@ -18,7 +45,9 @@ class DataLoader:
                 missing_files.append(file_name)
         
         if missing_files:
-            raise FileNotFoundError(f"Missing data files: {missing_files}")
+            print(f"⚠️ Missing files: {missing_files}")
+        else:
+            print("✅ All data files found!")
     
     def load_customers(self):
         """Load customers dataset"""
@@ -54,13 +83,21 @@ class DataLoader:
     
     def load_all_data(self):
         """Load all datasets into a dictionary"""
-        return {
-            'customers': self.load_customers(),
-            'products': self.load_products(),
-            'orders': self.load_orders(),
-            'order_items': self.load_order_items(),
-            'suppliers': self.load_suppliers(),
-            'reviews': self.load_reviews(),
-            'payments': self.load_payments(),
-            'shipments': self.load_shipments()
-        }
+        data_dict = {}
+        
+        # Carregar apenas os arquivos que existem
+        for data_name, file_name in config.DATA_FILES.items():
+            file_path = self.data_dir / file_name
+            if file_path.exists():
+                try:
+                    data_dict[data_name] = pd.read_csv(file_path)
+                    print(f"✅ Loaded {data_name}: {len(data_dict[data_name])} records")
+                    print(f"   Columns: {list(data_dict[data_name].columns)}")
+                except Exception as e:
+                    print(f"❌ Error loading {data_name}: {e}")
+                    data_dict[data_name] = pd.DataFrame()
+            else:
+                print(f"⚠️ File not found: {file_name}")
+                data_dict[data_name] = pd.DataFrame()
+        
+        return data_dict

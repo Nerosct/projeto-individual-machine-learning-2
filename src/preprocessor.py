@@ -15,6 +15,12 @@ class DataPreprocessor:
     def prepare_customer_features(self, orders, order_items, reviews):
         """Create customer features for clustering (RFM + Reviews)"""
         
+        print("🔄 Preparing customer features...")
+        
+        # Converter datas se necessário
+        if 'order_date' in orders.columns:
+            orders['order_date'] = pd.to_datetime(orders['order_date'])
+        
         # Basic RFM features from orders
         customer_orders = orders.groupby('customer_id').agg({
             'order_id': 'count',
@@ -33,34 +39,48 @@ class DataPreprocessor:
         customer_orders['recency'] = (current_date - customer_orders['last_order']).dt.days
         
         # Review features
-        customer_reviews = reviews.groupby('customer_id').agg({
-            'rating': ['mean', 'count']
-        }).reset_index()
-        customer_reviews.columns = ['customer_id', 'avg_rating', 'review_count']
+        if not reviews.empty and 'customer_id' in reviews.columns:
+            customer_reviews = reviews.groupby('customer_id').agg({
+                'rating': ['mean', 'count']
+            }).reset_index()
+            customer_reviews.columns = ['customer_id', 'avg_rating', 'review_count']
+        else:
+            customer_reviews = pd.DataFrame(columns=['customer_id', 'avg_rating', 'review_count'])
         
         # Merge features
         customer_features = customer_orders.merge(
             customer_reviews, on='customer_id', how='left'
         ).fillna(0)
         
-        # Select final features for clustering
+        # Select final features for clustering - USANDO OS NOMES REAIS DAS COLUNAS
         features_for_clustering = customer_features[[
             'recency', 'order_count', 'total_spent', 'avg_rating'
         ]]
         
-        # Rename for RFM convention
+        # Renomear para nomes mais descritivos
         features_for_clustering.columns = [
             'recency', 'frequency', 'monetary', 'avg_rating'
         ]
+        
+        # Adicionar os nomes originais também para referência
+        customer_features.rename(columns={
+            'order_count': 'frequency',
+            'total_spent': 'monetary'
+        }, inplace=True)
         
         self.customer_features = customer_features
         self.features_for_clustering = features_for_clustering
         self.features_created = True
         
+        print(f"✅ Customer features created: {len(customer_features)} customers")
+        print(f"   Features: {list(features_for_clustering.columns)}")
+        
         return features_for_clustering, customer_features
     
     def prepare_product_features(self, products, order_items, reviews):
         """Create product features for anomaly detection"""
+        
+        print("🔄 Preparing product features...")
         
         # Sales features from order_items
         product_sales = order_items.groupby('product_id').agg({
@@ -74,10 +94,13 @@ class DataPreprocessor:
         ]
         
         # Review features
-        product_reviews = reviews.groupby('product_id').agg({
-            'rating': 'mean'
-        }).reset_index()
-        product_reviews.columns = ['product_id', 'avg_rating']
+        if not reviews.empty and 'product_id' in reviews.columns:
+            product_reviews = reviews.groupby('product_id').agg({
+                'rating': 'mean'
+            }).reset_index()
+            product_reviews.columns = ['product_id', 'avg_rating']
+        else:
+            product_reviews = pd.DataFrame(columns=['product_id', 'avg_rating'])
         
         # Merge with product information
         product_features = products.merge(
@@ -93,6 +116,9 @@ class DataPreprocessor:
         
         self.product_features = product_features
         self.features_for_anomaly = features_for_anomaly
+        
+        print(f"✅ Product features created: {len(product_features)} products")
+        print(f"   Features: {list(features_for_anomaly.columns)}")
         
         return features_for_anomaly, product_features
     

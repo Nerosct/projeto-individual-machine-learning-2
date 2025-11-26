@@ -1,0 +1,8 @@
+Metric,Value
+Total Customers,10000
+Total Products,2000
+Total Orders,15000
+Total Reviews,1106
+K-Means Silhouette Score,0.387
+DBSCAN Anomalies Detected,66
+Anomaly Percentage,3.30%

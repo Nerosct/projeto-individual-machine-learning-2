@@ -4,14 +4,20 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from pathlib import Path
-import config
+from sklearn.decomposition import PCA
 
 class Visualizer:
     """Class for creating visualizations"""
     
     def __init__(self, save_dir=None):
-        self.save_dir = Path(save_dir) if save_dir else config.PLOTS_DIR
-        self.save_dir.mkdir(exist_ok=True)
+        if save_dir:
+            self.save_dir = Path(save_dir)
+        else:
+            # Configuração inline
+            self.root_dir = Path(__file__).parent.parent
+            self.save_dir = self.root_dir / "results" / "plots"
+        
+        self.save_dir.mkdir(parents=True, exist_ok=True)
         
         # Set style
         plt.style.use('default')
@@ -68,7 +74,6 @@ class Visualizer:
                           f'{int(height)}', ha='center', va='bottom', fontweight='bold')
         
         # PCA visualization
-        from sklearn.decomposition import PCA
         pca = PCA(n_components=2)
         pca_components = pca.fit_transform(data)
         
@@ -127,13 +132,14 @@ class Visualizer:
         axes[1,0].set_xlabel(feature_names[0])
         axes[1,0].set_ylabel('Frequency')
         axes[1,0].set_title('Price Distribution')
-        axes[1,0].axvline(x=data[feature_names[0]].quantile(0.95), 
-                         color='red', linestyle='--', label='95th percentile')
+        if len(data[feature_names[0]]) > 0:
+            axes[1,0].axvline(x=data[feature_names[0]].quantile(0.95), 
+                             color='red', linestyle='--', label='95th percentile')
         axes[1,0].legend()
         axes[1,0].grid(True, alpha=0.3)
         
         # Anomaly types (if available)
-        if hasattr(self, 'anomaly_types'):
+        if hasattr(self, 'anomaly_types') and self.anomaly_types:
             anomaly_types_data = self.anomaly_types
             axes[1,1].bar(anomaly_types_data.keys(), anomaly_types_data.values(), 
                          color='red', alpha=0.7)
@@ -159,7 +165,6 @@ class Visualizer:
         fig.suptitle('Comparison: K-Means vs DBSCAN', fontsize=16, fontweight='bold')
         
         # K-Means PCA
-        from sklearn.decomposition import PCA
         pca_kmeans = PCA(n_components=2)
         kmeans_pca = pca_kmeans.fit_transform(kmeans_data['features'])
         
